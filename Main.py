@@ -4,10 +4,8 @@ import cv2
 import numpy as np
 
 # Define our color ranges
-pinkLower = np.array([0,80,80], dtype=np.uint8)
-pinkUpper = np.array([20,255,255], dtype=np.uint8)
-pinkLower2 = np.array([135,55,55], dtype=np.uint8)
-pinkUpper2 = np.array([180,255,255], dtype=np.uint8)
+pinkLower = np.array([135,55,55], dtype=np.uint8)
+pinkUpper = np.array([180,255,255], dtype=np.uint8)
 whiteLower = np.array([0,0,180], dtype=np.uint8)
 whiteUpper = np.array([180,80,255], dtype=np.uint8)
 
@@ -57,7 +55,7 @@ def alignImages(im1, im2):
 
   return im1Reg, h
 
-
+# Creats a mask using the color boundarys of our choosing
 def Create_Mask(mask,lower,upper):
     mask = cv2.inRange(mask,lower,upper)
     mask = cv2.erode(mask, None, iterations=1)
@@ -70,6 +68,7 @@ imageA = imutils.resize(imageA, width = 300)
 imageB = cv2.imread('Branch2.jpg')
 imageB = imutils.resize(imageB, width = 300)
 
+# Aligns our images
 imageA,h = alignImages(imageA,imageB)
 imageB,h = alignImages(imageB,imageA)
 
@@ -79,19 +78,17 @@ HSVB = cv2.cvtColor(imageB, cv2.COLOR_BGR2HSV)
 
 # Creates our masks for our first image
 pinkA = Create_Mask(HSVA,pinkLower,pinkUpper)
-pinkA2 = Create_Mask(HSVA,pinkLower2,pinkUpper2)
 whiteA = Create_Mask(HSVA,whiteLower,whiteUpper)
 
 # Creates our masks for our second image
 pinkB = Create_Mask(HSVB,pinkLower,pinkUpper)
-pinkB2 = Create_Mask(HSVB,pinkLower2,pinkUpper2)
 whiteB = Create_Mask(HSVB,whiteLower,whiteUpper)
 
 # Combines our masks
-FilteredA =  pinkA2 | whiteA
-FilteredAImage = cv2.bitwise_and(imageA,imageA,mask=FilteredA)
-FilteredB =  pinkB2 | whiteB
-FilteredBImage = cv2.bitwise_and(imageB,imageB,mask=FilteredB)
+FilteredA =  pinkA | whiteA
+OverlayA = cv2.bitwise_and(imageA,imageA,mask=FilteredA)
+FilteredB =  pinkB | whiteB
+OverlayB = cv2.bitwise_and(imageB,imageB,mask=FilteredB)
 
 # Compares our masked images
 (score, diff) = compare_ssim(FilteredA, FilteredB, full = True)
@@ -105,17 +102,18 @@ cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
 cnts = imutils.grab_contours(cnts)
 
 for c in cnts:
+    # Grabs our contour area
     area = cv2.contourArea(c)
-
-    if (area > 100):
+    # If the area is too small dont show/draw it
+    if (area > 50):
         (x, y, w, h,) = cv2.boundingRect(c)
         cv2.rectangle(imageA, (x, y), (x + w, y + h), (0, 0, 255), 2)
         cv2.rectangle(imageB, (x, y), (x + w, y + h), (0, 0, 255), 2)
 
-
-#cv2.imshow("1", FilteredA)
+# Displays our images
+cv2.imshow("Overlay A", OverlayA)
 cv2.imshow("imageA",imageA)
-#cv2.imshow("2", FilteredB)
+cv2.imshow("Overlay 2", OverlayB)
 cv2.imshow("imageB",imageB)
 cv2.imshow("diff", diff)
 cv2.imshow("thresh", thresh)
